@@ -803,6 +803,7 @@ SVM.prototype = {
 
     SMO: function () {
         console.info("🐻 SMO (Platt): "+this.data.length);
+        console.info("ciao");
         this.update();
         //let statistics = {};
         if(this.N === 0) return 0; // statistics;
@@ -810,8 +811,9 @@ SVM.prototype = {
         let examineAll = 1;
         this.iter = 0;
         this.N = this.data.length; //length of training examples
+        this.maxiter = 10000;
 
-        while(numChanged > 0 || examineAll){ //outer loop
+        while((numChanged > 0 || examineAll) && this.iter < this.maxiter){ //outer loop
             numChanged = 0;
             if(examineAll){
                 for (let i=0;i<this.N;i++){ //loop over all training examples
