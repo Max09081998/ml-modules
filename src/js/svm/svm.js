@@ -221,6 +221,135 @@ SVM.prototype = {
 
     },
 
+    trainModified: function(data, labels, options) {
+
+        this.data = data;
+        this.labels = labels;
+        this.options = options;
+
+        // parameters
+        // options = options || {};
+        this.options = this.options || {};
+        let options = this.options;
+        let C = options.C || 1.0; // C value. Decrease for more regularization
+        let tol = options.tol || 1e-4; // numerical tolerance. Don't touch unless you're pro
+        let alphatol = options.alphatol || 0; // non-support vectors for space and time efficiency are truncated. To guarantee correct result set this to 0 to do no truncating. If you want to increase efficiency, experiment with setting this little higher, up to maybe 1e-4 or so.
+        let maxiter = options.maxiter || 10000; // max number of iterations
+        let numpasses = options.numpasses || 10; // how many passes over data with no change before we halt? Increase for more precision.
+        let SSCA = options.SSCA || false; // smoothed separable case approximation algorithm
+        let UB = options.UB || 0.5;
+
+        this.C = C;
+        this.tol = tol;
+        this.alphatol = alphatol;
+        this.maxiter = maxiter;
+        this.numpasses = numpasses;
+        this.eps = 1e-3; // for the full implemented SMO algorithm
+
+        // instantiate kernel according to options. kernel can be given as string or as a custom function
+        let kernel = linearKernel;
+        this.kernelType = "linear";
+        let kernelType = "linear";
+        for (let d in this.options.kernel) {
+            if (this.options.kernel[d]) kernelType = d;
+            }
+        if("kernel" in options) {
+            if(typeof kernelType === "string") {
+                // kernel was specified as a string. Handle these special cases appropriately
+                if(kernelType === "linear") {
+                    this.kernelType = "linear";
+                    kernel = linearKernel;
+                }
+                if(kernelType === "rbf") {
+                    let rbfSigma = options.rbfsigma || 0.5;
+                    this.rbfSigma = rbfSigma; // back this up
+                    this.kernelType = "rbf";
+                    kernel = makeRbfKernel(rbfSigma);
+                }
+                if(kernelType === "poly"){
+                    let degree = options.degree || 2;
+                    this.degree = degree;
+                    let influence = options.influence || 1;
+                    if(influence<0) //cannot be negative
+                        influence = 0; //setting to zero
+                    this.influence = influence;
+                    this.kernelType = "poly";
+                    kernel = makePolyKernel(degree, influence);
+                }
+                if(kernelType === "sigm"){
+                    let influence = options.influence || 1;
+                    if(influence<0) //cannot be negative
+                        influence = 0; //setting to zero
+                    this.influence = influence;
+                    this.kernelType = "sigm";
+                    kernel = makeSigmoidKernel(influence);
+                }
+            }
+            else {
+                // assume kernel was specified as a function. Let's just use it
+                this.kernelType = "custom";
+                kernel = options.kernel;
+            }
+        }
+
+        //kernel choice
+        this.kernel = kernel;
+        //initializations
+        this.N = this.data.length;
+        this.D = this.data[0].length;
+        this.alpha = utils.array.zeros(this.N);
+        this.b = 0.0;
+        this.usew_ = false; // internal efficiency flag
+
+        this.use_timer = options.timer;
+
+        if(this.use_timer) {
+            this.ctx = options.timer.ctx || null;
+            this.updateFrequency = options.timer.updateFrequency || null;
+            this.stepsFrequency = options.timer.stepsFrequency || null;
+        }
+
+        // Cache kernel computations to avoid expensive recomputation.
+        // This could use too much memory if N is large.
+        if (options.memoize) {
+            this.kernelResults = new Array(this.N);
+            for (let i=0;i<this.N;i++) {
+                this.kernelResults[i] = new Array(this.N);
+                for (let j=0;j<this.N;j++) {
+                    this.kernelResults[i][j] = this.kernel(data[i],data[j]);
+                }
+            }
+        }
+
+        this.karpathy = options.karpathy || false;
+        if(this.karpathy){
+            // run SMO algorithm
+            this.iter = 0;
+            this.passes = 0;
+
+            if(options.timer){
+                this.timerKarpathySMO();
+            }
+            else{
+                this.karpathySMO();
+                this.store();
+            }
+        }
+        else {
+            //FULL Sequential Minimal Optimization (J.Platt)
+            //find non-pruned solution for SVM
+            this.SMO();
+
+            //Smoothed Separable Case Approximation
+            if(SSCA){
+                this.SSCA(UB,options);
+                this.SMO();
+            }
+            this.store();
+        }
+
+    },
+
     karpathySMO: function(){
         while(this.passes < this.numpasses && this.iter < this.maxiter) {
             this.karpathySMOtime();
