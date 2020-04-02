@@ -93,11 +93,22 @@ SVM.prototype = {
         return options;
     },
 
+    setData: function(data, json) {
+        this.data = data;
+        this.labels = getLabelsFromData(data);
+        this.N = json.N;
+        this.D = json.D;
+        this.b = json.b;
+        this.kernelType = json.kernelType;
+        this.w = json.w;
+        this.alpha = utils.array.zeros(json.N);
+        this.usew_ = false;
+    },
+
     train: function(data, labels) {
 
         this.data = data;
         this.labels = labels;
-
         // parameters
         // options = options || {};
         this.options = this.options || {};
