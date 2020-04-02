@@ -105,6 +105,15 @@ SVM.prototype = {
         this.usew_ = false;
     },
 
+    getLabelsFromData: function(data) {
+        let res = [];
+        for(let i=0; i<data.length; i++) {
+            let obj = data[i]
+            res.push(obj[obj.length-1]);
+        }
+        return res;
+    },
+
     train: function(data, labels) {
 
         this.data = data;
