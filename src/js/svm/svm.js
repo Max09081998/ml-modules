@@ -93,27 +93,6 @@ SVM.prototype = {
         return options;
     },
 
-    setData: function(json) {
-        this.data = json.trainData;
-        this.label = json.trainLabels;
-        this.N = json.result.N;
-        this.D = json.result.D;
-        this.b = json.result.b;
-        this.kernelType = json.result.kernelType;
-        this.w = json.result.w;
-        this.alpha = utils.array.zeros(json.N);
-        this.usew_ = false;
-    },
-
-    getLabelsFromData: function(data) {
-        let res = [];
-        for(let i=0; i<data.length; i++) {
-            let obj = data[i]
-            res.push(obj[obj.length-1]);
-        }
-        return res;
-    },
-
     train: function(data, labels) {
 
         this.data = data;
@@ -465,6 +444,27 @@ SVM.prototype = {
     res.text = text;
     res.equation = equation;
     return res;
+    },
+
+    setData: function(json) {
+        console.log("i am called too!!!")
+        this.N = json.result.N;
+        this.D = json.result.D;
+        this.b = json.result.b;
+        this.kernelType = json.result.kernelType;
+        this.w = json.result.w
+    },
+
+    predictData: function(inst) {
+        return ((Math.tanh(this.marginOneCustom(inst)))+1)/2;
+    },
+
+    marginOneCustom: function(inst) {
+         let f = 0;
+         for(let j=0;j<this.D;j++) {
+            f += inst[j] * this.w[j];
+         }
+         return f;
     },
 
     // inst is an array of length D. Returns margin of given example
