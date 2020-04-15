@@ -461,7 +461,7 @@ SVM.prototype = {
     },
 
     marginOneCustom: function(inst) {
-         let f = 0;
+         let f = this.b;
          for(let j=0;j<this.D;j++) {
             f += inst[j] * this.w[j];
          }
