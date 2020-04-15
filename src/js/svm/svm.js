@@ -456,7 +456,8 @@ SVM.prototype = {
     },
 
     predictData: function(inst) {
-        return ((Math.tanh(this.marginOneCustom(inst)))+1)/2;
+        console.log("customPredict");
+        return this.marginOneCustom(inst) >= 0 ? 1:-1;
     },
 
     marginOneCustom: function(inst) {
